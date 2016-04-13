@@ -4,6 +4,7 @@
 #define __SCRAPYARD_H__
 
 #include "Engine.h"
+#include "Engine/GameInstance.h" 
 
 #include "Net/UnrealNetwork.h"
 #include "Online.h"
