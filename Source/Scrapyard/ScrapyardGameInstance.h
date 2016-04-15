@@ -60,7 +60,9 @@ public:
 
 	@return bool			true if successful, false otherwise
 	*/
-	bool JoinSession(TSharedPtr<const FUniqueNetId> UserId, FName SessionName, const FOnlineSessionSearchResult& SearchResult);
+	//bool JoinSession(TSharedPtr<const FUniqueNetId> UserId, FName SessionName, const FOnlineSessionSearchResult& SearchResult);
+
+	bool JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSessionSearchResult& SearchResult);
 
 	/*	Delegate called when a session join request has completed
 
@@ -109,6 +111,9 @@ public:
 	/////////////Blueprint Callable Functions/////////////
 	UFUNCTION(BlueprintCallable, Category="Network|Test")
 	void StartOnlineGame();
+
+	UFUNCTION(BlueprintCallable, Category="Network|Test")
+	void FindOnlineSessions();
 
 	UFUNCTION(BlueprintCallable, Category="Network|Test")
 	void JoinOnlineGame();

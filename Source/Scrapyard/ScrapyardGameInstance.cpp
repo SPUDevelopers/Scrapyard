@@ -18,12 +18,22 @@ UScrapyardGameInstance* UScrapyardGameInstance::GetGameInstance()
 	return this;
 }
 
+void UScrapyardGameInstance::FindOnlineSessions()
+{
+	ULocalPlayer* const Player = GetFirstGamePlayer();
+
+	FindSessions(Player->GetPreferredUniqueNetId(), GameSessionName, true, true);
+}
+
 void UScrapyardGameInstance::JoinOnlineGame()
 {
 	ULocalPlayer* const Player = GetFirstGamePlayer();
 
 	// Save the search result we want to join
 	FOnlineSessionSearchResult SearchResult;
+	bool joinSuccess = true;
+
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("JoinOnlineGame called")));
 
 	// If the array is not empty go through it
 	if (SessionSearch->SearchResults.Num() > 0)
@@ -35,10 +45,15 @@ void UScrapyardGameInstance::JoinOnlineGame()
 			{
 				// For testing just join the first session we find
 				// Need to have this be the onClick in the list of sessions via UMG
-				JoinSession(Player->GetPreferredUniqueNetId(), GameSessionName, SearchResult);
+				joinSuccess = JoinSession(Player, SearchResult);
 				break;
 			}
 		}
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("JoinSession BluePrint Success: %d"), joinSuccess));
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Not enough sessions found to join")));
 	}
 }
 
@@ -228,14 +243,14 @@ void UScrapyardGameInstance::OnFindSessionsComplete(bool bWasSuccessful)
 				{
 					// OwningUserName is just the Sessionname for now. But later we can handle this in the Host Settings Class and GameSession Class
 					// So that this has a proper gameserver name
-					GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Session number: &d | Sessionname: %s "), *(SessionSearch->SearchResults[SearchIdx].Session.OwningUserName)));
+					GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("Session number: %d | Sessionname: %s "), SearchIdx, *(SessionSearch->SearchResults[SearchIdx].Session.OwningUserName)));
 				}
 			}
 		}
 	}
 }
 
-bool UScrapyardGameInstance::JoinSession(TSharedPtr<const FUniqueNetId> UserId, FName SessionName, const FOnlineSessionSearchResult& SearchResult)
+/*bool UScrapyardGameInstance::JoinSession(TSharedPtr<const FUniqueNetId> UserId, FName SessionName, const FOnlineSessionSearchResult& SearchResult)
 {
 	bool bSuccessful = false;
 
@@ -256,6 +271,36 @@ bool UScrapyardGameInstance::JoinSession(TSharedPtr<const FUniqueNetId> UserId, 
 	}
 
 	return bSuccessful;
+}*/
+bool UScrapyardGameInstance::JoinSession(ULocalPlayer* LocalPlayer, const FOnlineSessionSearchResult& SearchResult)
+{
+	bool bSuccessful = false;
+
+	IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();
+
+	if (OnlineSub)
+	{
+		IOnlineSessionPtr Sessions = OnlineSub->GetSessionInterface();
+
+		if (Sessions.IsValid() && LocalPlayer->IsValidLowLevel())
+		{
+			// Set the handle again
+			OnJoinSessionCompleteDelegateHandle = Sessions->AddOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteDelegate);
+
+			// Call the JoinSession function with the SearchResult that we want to join.
+			bSuccessful = Sessions->JoinSession(*(LocalPlayer->GetPreferredUniqueNetId()), GameSessionName, SearchResult);
+		}
+		else
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("JoinSession_Impl Sessions and UserId was not valid")));
+		}
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("JoinSession_Impl, faile dot get OSS")));
+	}
+
+	return bSuccessful;
 }
 
 void UScrapyardGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
@@ -272,7 +317,7 @@ void UScrapyardGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSes
 			// Clear the delegate again
 			Sessions->ClearOnJoinSessionCompleteDelegate_Handle(OnJoinSessionCompleteDelegateHandle);
 
-			// Get the first local PlayerController to pass to ClientTravbel to get to the Server Map
+			// Get the first local PlayerController to pass to ClientTravel to get to the Server Map
 			APlayerController* const PlayerController = GetFirstLocalPlayerController();
 
 			// We need a FString for the travelURL so we let SessionInterface construct it with the
