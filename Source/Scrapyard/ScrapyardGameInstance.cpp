@@ -43,6 +43,7 @@ void UScrapyardGameInstance::JoinOnlineGame()
 			// To avoid weird duplicates, we filter the sessions from ourself
 			if (SessionSearch->SearchResults[i].Session.OwningUserId != Player->GetPreferredUniqueNetId())
 			{
+                SearchResult = SessionSearch->SearchResults[i];
 				// For testing just join the first session we find
 				// Need to have this be the onClick in the list of sessions via UMG
 				joinSuccess = JoinSession(Player, SearchResult);
